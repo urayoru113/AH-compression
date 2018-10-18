@@ -8,10 +8,11 @@
 
 int main(int argc, char **argv) {
     if (argv[1]) {
-        if (AHEncoder(argv[1])) return 1; 
+        return (AHEncoder(argv[1]));
     }
     else {
-        printf("Not input file\n");
+        perror("Not input file\n");
+        return 1;
     }
     return 0;
 }
