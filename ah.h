@@ -21,8 +21,9 @@ typedef struct node {
 } node_t;
 
 int AHFirstFetch(int , node_t **);
-int AHEncoder(char *);
+int AHEncoder(FILE *);
 int AHNodeAdd(node_t *, int);
 void AHNodeFree(node_t **);
-void AHNodeDump(node_t *);
+void AHNodeDump(node_t *, int);
+void AHTreeUpdate(node_t **ah_array, node_t *cur_node, node_t *);
 node_t *AHNodeNew(node_t *);
