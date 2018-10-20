@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#define BYTE_SIZE 8
+
 #define MAX_INDEX 256
 
 #define NYT   0
@@ -11,7 +13,7 @@
 
 
 typedef struct node {
-    struct node * parent;
+	struct node * parent;
     struct node * left;
     struct node * right;
     int sym;
@@ -20,10 +22,13 @@ typedef struct node {
     uint8_t freq; //symbol
 } node_t;
 
+
 int AHFirstFetch(int , node_t **);
-int AHEncoder(FILE *);
+int AHEncoder(FILE *, FILE *);
 int AHNodeAdd(node_t *, int);
 void AHNodeFree(node_t **);
 void AHNodeDump(node_t *, int);
-void AHTreeUpdate(node_t **ah_array, node_t *cur_node, node_t *);
+void AHTreeUpdate(node_t **ah_array, node_t *cur_node);
+void AHOutputBuffer(FILE*, uint8_t, int);
+void AHOutputFile(FILE *, uint8_t);
 node_t *AHNodeNew(node_t *);
