@@ -11,6 +11,7 @@
 #define NYTSYM -1;
 #define INNERSYM -2;
 
+typedef uint8_t Byte;
 
 typedef struct node {
 	struct node * parent;
@@ -19,7 +20,10 @@ typedef struct node {
     int sym;
     int order;
     int type;
-    uint8_t freq; //symbol
+    int depth;
+    Byte freq;
+    Byte code;
+    
 } node_t;
 
 
