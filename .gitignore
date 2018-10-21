@@ -1,1 +1,3 @@
-barbara_gray.raw lena.raw
+*.raw
+test.dump
+ah
