@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include "ah.h"
 
-typedef uint8_t Byte;
 
 void AHNodeDump(node_t *root, int count) {
     node_t *node = root;
@@ -11,11 +10,6 @@ void AHNodeDump(node_t *root, int count) {
     printf("sym: %d ", node->sym);
     printf("order: %d ", node->order);
     printf("freq: %d ", node->freq);
-    printf("depth: %d ", node->depth);
-    printf("code: ");
-    for (int i = root->depth - 1; i >= 0; i--) {
-        printf("%d", (node->code & 1) >> i);
-    }
     printf("\n");
     if (node->left != NULL) {
         /*
@@ -48,9 +42,7 @@ node_t *AHNodeNew(node_t *parent) {
     node->sym = NYTSYM;
     node->order = 0;
     node->type = NYT;
-    node->depth = 0;
     node->freq = 0;
-    node->code = 0;
     return node;
 }
 
@@ -70,16 +62,12 @@ int AHNodeAdd(node_t *parent, int ch) {
     left->sym = NYTSYM;
     left->order = parent->order - 2;
     left->type = NYT;
-    left->depth = parent->depth + 1;
     left->freq = 0;
-    left->code = (parent->code << 1) + 0;
     right->parent = parent;
     right->sym = ch;
     right->order = parent->order - 1;
     right->type = LEAF;
-    right->depth = parent->depth + 1;
     right->freq = 1;
-    right->code = (parent->code << 1) + 1;
     parent->left = left;
     parent->right = right;
     parent->sym = INNERSYM;
@@ -92,21 +80,21 @@ void AHArrayDump(node_t **tree_array) {
     printf("order: ");
     for (int i = 0; i <= MAX_INDEX; i++) {
         if (tree_array[i] != NULL) {
-            printf("%5d", tree_array[i]->order);
+            printf("%6d ", tree_array[i]->order);
         }
     }
     printf("\n");
     printf("sym:   ");
     for (int i = 0; i <= MAX_INDEX; i++) {
         if (tree_array[i] != NULL) {
-            printf("%5d", tree_array[i]->sym);
+            printf("%6d ", tree_array[i]->sym);
         }
     }
     printf("\n");
     printf("freq:  ");
     for (int i = 0; i <= MAX_INDEX; i++) {
         if (tree_array[i] != NULL) {
-            printf("%5d", tree_array[i]->freq);
+            printf("%6d ", tree_array[i]->freq);
         }
     }
     printf("\n");
@@ -122,19 +110,17 @@ void AHNodeMove(node_t *source, node_t *target) {
     source->order = target->order;
 }
 
+
+/*
 void AHTreeUpdateDepthAndCode(node_t *node) {
     if (node->left != NULL) {
         node->left->depth = node->depth + 1;
-        node->left->code = (node->code << 1) + 0;
-        AHTreeUpdateDepthAndCode(node->left);
-    }
-    if (node->right != NULL) {
-        node->right->depth = node->depth + 1;
+        -node>right->depth = node->depth + 1;
         node->right->code = (node->code << 1) + 1;
         AHTreeUpdateDepthAndCode(node->right);
     }
 }
-
+*/
 
 void AHVitter(node_t **tree_array, node_t *cur_node) {
     int head = 0; //block head index
@@ -206,26 +192,49 @@ void AHVitter(node_t **tree_array, node_t *cur_node) {
         }
     }
     cur_node->freq++;
-    AHTreeUpdateDepthAndCode(tree_array[MAX_INDEX]);
 }
 
-void AHOutputBuffer(FILE *OutputFile, Byte ch, int size) {
-    static Byte encode = 0;
-    static int pos = 7;
-    for (int offset = size - 1; offset >= 0; offset--) {
-        encode += (ch >> offset) & 1;
-        pos--;
-        if (pos == -1) {
-            AHOutputFile(OutputFile, encode);
-            pos = 7;
+void AHOutputBuffer(FILE *OutputFile, node_t *node, int *offset) {
+    int len = 0;
+    uint8_t OutputBuffer[CODE_SIZE];
+    static uint8_t encode = 0;
+    node_t *tmp = node;
+    if (node == NULL && *offset != 0) {
+        AHOutputFile(OutputFile, encode << (8 - *offset));
+        return;
+    }
+    while (tmp->parent != NULL) {
+        if (tmp->parent->left == tmp) {
+            OutputBuffer[len] = 0;
+        } else {
+            OutputBuffer[len] = 1;
         }
-        encode <<= 1;
+        len++;
+        tmp = tmp->parent;
+    }
+    for (int i = len - 1; i >= 0; i--) {
+        encode = (encode << 1) + OutputBuffer[i];
+        (*offset)++;
+        if (*offset == 8) {
+            AHOutputFile(OutputFile, encode);
+            *offset = 0;
+        }
+    }
+    if (node->type == INNER) {
+        for (int i = 7; i >= 0; i--) {
+            encode = (encode << 1) + ((node->right->sym >> i) & 1);
+            (*offset)++;
+            if (*offset == 8) {
+                AHOutputFile(OutputFile, encode);
+                *offset = 0;
+            }
+        }
     }
 }
 
-void AHOutputFile(FILE *OutputFile, Byte OutputBuf) {
-    fputc(OutputBuf, OutputFile);
-    //printf("OutputBuf content %d\n", OutputBuf);
+void AHOutputFile(FILE *OutputFile, uint8_t encode) {
+    fputc(encode, OutputFile);
+    //printf("OutputBuffer content %d\n", encode);
 }
 
 
@@ -246,45 +255,43 @@ int AHEncoder(FILE *InputFile, FILE *OutputFile) {
     root->order = MAX_INDEX;
     tree_array[MAX_INDEX] = root;
 
-    node_t *nyt;
-    node_t *leaf;
+    node_t *nyt = NULL;
+    node_t *leaf = NULL;
+    node_t *node = NULL;
     nyt = root;
     int ch;
-    int progress = 0;
+    int offset = 0;
     while ((ch = fgetc(InputFile)) != EOF) {
-        printf("\nappend symbol %d\n", ch);
-        if (++progress == MAX_INDEX) break;
-        printf("progress %d\n", progress);
         if (AHFirstFetch(ch, tree_array)) {
             if (AHNodeAdd(nyt, ch)) {
                 ret = 1;
                 goto FREE;
             }
-            AHOutputBuffer(OutputFile, nyt->code, nyt->depth); 
-            AHOutputBuffer(OutputFile, ch, BYTE_SIZE);
-            tree_array[nyt->left->order] = nyt->left;
-            tree_array[nyt->right->order] = nyt->right;
-            AHVitter(tree_array, nyt);
-            nyt = nyt->left;
+            node = nyt;
+            nyt = node->left;
+            AHOutputBuffer(OutputFile, node, &offset);//put nyt and symbol
+            tree_array[node->left->order] = node->left;
+            tree_array[node->right->order] = node->right;
+            AHVitter(tree_array, node);
         } else {
-            for (int i = 0; i <= MAX_INDEX; i++) {
-                if (tree_array[i] != NULL && tree_array[i]->sym == ch) {
+            for (int i = MAX_INDEX; tree_array[i] != NULL; i--) {
+                if (tree_array[i]->sym == ch) {
                     leaf = tree_array[i];
                 }
             }
-            AHOutputBuffer(OutputFile, leaf->code, leaf->depth); 
+            AHOutputBuffer(OutputFile, leaf, &offset); 
             AHVitter(tree_array, leaf);
         }
-        AHArrayDump(tree_array);
     }
     /*
      * Padding last OutputBuf to zero
      * example: If input ab output will be 01100001 00110001 1
      * and padding its to 01100001 00110001 10000000
      */
-    //AHNodeDump(root, 0);
+    //AHNodeDump(tree_array[MAX_INDEX], 0);
     //AHArrayDump(tree_array);
-    AHOutputBuffer(OutputFile, 0, BYTE_SIZE - 1); 
+    AHOutputBuffer(OutputFile, NULL, &offset); 
+    AHOutputFile(OutputFile, (uint8_t)(8 - offset));
 
 FREE:
     AHNodeFree(tree_array);

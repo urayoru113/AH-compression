@@ -29,6 +29,8 @@ int main(int argc, char **argv) {
             ret = 1;
             goto EXIT;
         }
+        fclose(InputFile);
+        fclose(OutputFile);
     }
     else {
         perror("Not input file\n");

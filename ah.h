@@ -1,8 +1,8 @@
 #include <stdint.h>
 
-#define BYTE_SIZE 8
+#define CODE_SIZE 32
 
-#define MAX_INDEX 256
+#define MAX_INDEX 513
 
 #define NYT   0
 #define INNER 1
@@ -11,7 +11,6 @@
 #define NYTSYM -1;
 #define INNERSYM -2;
 
-typedef uint8_t Byte;
 
 typedef struct node {
 	struct node * parent;
@@ -20,9 +19,7 @@ typedef struct node {
     int sym;
     int order;
     int type;
-    int depth;
-    Byte freq;
-    Byte code;
+    int freq;
 } node_t;
 
 
@@ -31,8 +28,8 @@ int AHEncoder(FILE *, FILE *);
 int AHNodeAdd(node_t *, int);
 void AHNodeFree(node_t **);
 void AHNodeDump(node_t *, int);
-void AHVitter(node_t **ah_array, node_t *cur_node);
-void AHOutputBuffer(FILE*, uint8_t, int);
+void AHVitter(node_t **, node_t *);
+void AHOutputBuffer(FILE *, node_t *, int *);
 void AHOutputFile(FILE *, uint8_t);
 void AHNodeMove(node_t *, node_t *);
 void AHTreeUpdateDepthAndCode(node_t *);
