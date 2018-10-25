@@ -10,25 +10,22 @@ void AHNodeDump(node_t *root, int count) {
     printf("sym: %d ", node->sym);
     printf("order: %d ", node->order);
     printf("freq: %d ", node->freq);
+    printf("type: %d ", node->type);
     printf("\n");
     if (node->left != NULL) {
-        /*
-        if (node->left->depth < count) {
+        if (count + node->order > 513) {
             printf("loop\n");
             printf("node %d\n", node->left->order);
             return;
         }
-        */
         AHNodeDump(node->left, count + 1);
     }
     if (node->right != NULL) {
-        /*
-        if (node->right->depth < count) {
+        if (count + node->order > 513) {
             printf("loop\n");
             printf("node %d\n", node->right->order);
             return;
         }
-        */
         AHNodeDump(node->right, count + 1);
     }
 }
@@ -122,6 +119,53 @@ void AHTreeUpdateDepthAndCode(node_t *node) {
 }
 */
 
+void AHFGK(node_t **tree_array, node_t *cur_node) {
+    int head = 0; //block head index
+    int tail = 0; //block tail index
+    node_t *aux;
+    node_t *aux_parent;
+    int aux_order;
+    while (cur_node->parent != NULL) {
+        head = cur_node->order;
+        tail = 0;
+        for (int i = MAX_INDEX - 1; i > cur_node->order; i--) {
+            if (tree_array[i] != NULL) {
+                if (cur_node->freq == tree_array[i]->freq) {
+                    tail = tree_array[i]->order;
+                    break;
+                }
+            }
+        }
+        aux = tree_array[head];
+        aux_parent = tree_array[head]->parent;
+        aux_order = tree_array[head]->order;
+        if (tail > head && (tree_array[head]->parent != tree_array[tail])) {
+            cur_node->freq++;
+            tree_array[head] = tree_array[tail];
+            tree_array[tail] = aux;
+            if (tree_array[head]->order & 1) {
+                tree_array[head]->parent->right = tree_array[tail];
+            } else {
+                tree_array[head]->parent->left = tree_array[tail];
+            }
+            tree_array[tail]->parent = tree_array[head]->parent;
+            tree_array[tail]->order = tree_array[head]->order;
+            if (aux_order & 1) {
+                aux_parent->right = tree_array[head];
+            } else {
+                aux_parent->left = tree_array[head];
+            }
+            tree_array[head]->parent = aux_parent;
+            tree_array[head]->order = aux_order;
+            cur_node = aux_parent;
+        } else {
+            cur_node->freq++;
+            cur_node = cur_node->parent;
+        }
+    }
+    cur_node->freq++;
+}
+
 void AHVitter(node_t **tree_array, node_t *cur_node) {
     int head = 0; //block head index
     int tail = 0; //block tail index
@@ -166,8 +210,8 @@ void AHVitter(node_t **tree_array, node_t *cur_node) {
             cur_node = aux_parent;
         }  
         else if (cur_node->type == LEAF &&
-                 tail > head &&
-                 ((tail != head + 1) |
+                tail > head &&
+                ((tail != head + 1) |
                  (tree_array[head]->parent != tree_array[tail]))) {
             for (int i = head; i < tail; i++) {
                 tree_array[i] = tree_array[i + 1];
@@ -272,7 +316,7 @@ int AHEncoder(FILE *InputFile, FILE *OutputFile) {
             AHOutputBuffer(OutputFile, node, &offset);//put nyt and symbol
             tree_array[node->left->order] = node->left;
             tree_array[node->right->order] = node->right;
-            AHVitter(tree_array, node);
+            AHFGK(tree_array, node);
         } else {
             for (int i = MAX_INDEX; tree_array[i] != NULL; i--) {
                 if (tree_array[i]->sym == ch) {
@@ -280,7 +324,7 @@ int AHEncoder(FILE *InputFile, FILE *OutputFile) {
                 }
             }
             AHOutputBuffer(OutputFile, leaf, &offset); 
-            AHVitter(tree_array, leaf);
+            AHFGK(tree_array, leaf);
         }
     }
     /*

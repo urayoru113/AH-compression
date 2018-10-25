@@ -2,7 +2,7 @@
 
 #define CODE_SIZE 32
 
-#define MAX_INDEX 513
+#define MAX_INDEX 512
 
 #define NYT   0
 #define INNER 1
@@ -29,6 +29,7 @@ int AHNodeAdd(node_t *, int);
 void AHNodeFree(node_t **);
 void AHNodeDump(node_t *, int);
 void AHVitter(node_t **, node_t *);
+void AHFGK(node_t **, node_t *);
 void AHOutputBuffer(FILE *, node_t *, int *);
 void AHOutputFile(FILE *, uint8_t);
 void AHNodeMove(node_t *, node_t *);
